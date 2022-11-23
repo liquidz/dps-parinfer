@@ -1,5 +1,5 @@
-let g:dps_parinfer_delay = get(g:, 'dps_parinfer_delay', 0)
-let s:timer = 0
+" let g:dps_parinfer_delay = get(g:, 'dps_parinfer_delay', 0)
+" let s:timer = 0
 
 function! s:update_curpos() abort
   let w:dps_parinfer_curpos = getcurpos()
