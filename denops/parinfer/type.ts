@@ -58,3 +58,9 @@ export type ParinferFn = (
   text: string,
   option: ParinferOption,
 ) => ParinferResult;
+
+export type Config = {
+  mode: ParinferMode;
+  filetypes: Array<string>;
+  option: ParinferOption;
+};

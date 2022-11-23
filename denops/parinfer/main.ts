@@ -1,24 +1,30 @@
-import {
-  autocmd,
-  batch,
-  Denops,
-  helper,
-  unknownutil,
-  variable,
-} from "./deps.ts";
-import { Cursor, ParinferMode, ParinferOption } from "./type.ts";
+import { batch, Denops, helper, unknownutil, variable } from "./deps.ts";
+import { Config, Cursor, ParinferMode, ParinferOption } from "./type.ts";
 import { applyParinfer, getChanges } from "./parinfer.ts";
 import { unknownToParinferMode, unknownToParinferOption } from "./unknown.ts";
+
+const DEFAULT_FILETYPES = [
+  "carp",
+  "clojure",
+  "dune",
+  "fennel",
+  "hy",
+  "janet",
+  "lisp",
+  "racket",
+  "scheme",
+  "wast",
+  "yuck",
+];
 
 function unixTime(): number {
   return (new Date()).getTime();
 }
 
-async function loadGlobalConfig(
-  denops: Denops,
-): Promise<[ParinferMode, ParinferOption]> {
+async function loadGlobalConfig(denops: Denops): Promise<Config> {
   const [
     mode,
+    filetypes,
     commentChars,
     openParenChars,
     closeParenChars,
@@ -26,6 +32,7 @@ async function loadGlobalConfig(
     partialResult,
   ] = await batch.gather(denops, async (denops) => {
     await variable.globals.get(denops, "dps_parinfer_mode");
+    await variable.globals.get(denops, "dps_parinfer_filetypes");
     await variable.globals.get(denops, "dps_parinfer_comment_chars");
     await variable.globals.get(denops, "dps_parinfer_open_paren_chars");
     await variable.globals.get(denops, "dps_parinfer_close_paren_chars");
@@ -33,16 +40,19 @@ async function loadGlobalConfig(
     await variable.globals.get(denops, "dps_parinfer_partial_result");
   });
 
-  return [
-    unknownToParinferMode(mode),
-    unknownToParinferOption({
+  return {
+    mode: unknownToParinferMode(mode),
+    filetypes: (filetypes)
+      ? unknownutil.ensureArray<string>(filetypes)
+      : DEFAULT_FILETYPES,
+    option: unknownToParinferOption({
       "commentChars": commentChars,
       "openParenChars": openParenChars,
       "closeParenChars": closeParenChars,
       "forceBalance": forceBalance,
       "partialResult": partialResult,
     }),
-  ];
+  };
 }
 
 async function getCurrentStatus(
@@ -82,10 +92,10 @@ async function getCurrentStatus(
 }
 
 export async function main(denops: Denops): Promise<void> {
-  const [initialMode, globalOption] = await loadGlobalConfig(denops);
+  const globalConfig = await loadGlobalConfig(denops);
   const bufferOptions: Map<string, ParinferOption> = new Map();
 
-  let mode: ParinferMode = initialMode;
+  let mode: ParinferMode = globalConfig.mode;
   const prevCursor: Cursor = { line: -1, column: -1 };
   let innerPrevText = "";
   let lastUpdatedAt = unixTime();
@@ -122,7 +132,10 @@ export async function main(denops: Denops): Promise<void> {
       );
 
       const joined = lines.join("\n");
-      const option = { ...globalOption, ...(bufferOptions.get(filetype)) };
+      const option = {
+        ...(globalConfig.option),
+        ...(bufferOptions.get(filetype)),
+      };
       option.cursorLine = pos[1] - 1;
       option.cursorX = pos[2] - 1;
       option.prevCursorLine = prevPos[1] - 1;
@@ -162,32 +175,53 @@ export async function main(denops: Denops): Promise<void> {
 
       await denops.redraw(false);
     },
+
+    async initialize() {
+      const n = denops.name;
+      await helper.execute(
+        denops,
+        `
+        command! DpsParinferDisable call denops#notify("${n}", "disable", [])
+        command! DpsParinferEnable call denops#notify("${n}", "enable", [])
+        command! DpsParinferApply call denops#notify("${n}", "applyToBuffer", [])
+        command! DpsParinferSmartMode call denops#notify("${n}", "switchToSmartMode", [])
+        command! DpsParinferParenMode call denops#notify("${n}", "switchToParenMode", [])
+        command! DpsParinferIndentMode call denops#notify("${n}", "switchToIndentMode", [])
+        call dps_parinfer#buf_enter("${n}")
+
+        aug DpsParinferAutoCmd
+          au!
+          au BufEnter <buffer> call dps_parinfer#buf_enter("${n}")
+          au WinEnter <buffer> call dps_parinfer#win_enter("${n}")
+          au CursorMoved <buffer> call dps_parinfer#cursor_moved("${n}")
+          au TextChanged <buffer> call dps_parinfer#apply("${n}")
+          au TextChangedI <buffer> call dps_parinfer#apply("${n}")
+          au InsertCharPre <buffer> call dps_parinfer#apply("${n}")
+          au InsertEnter <buffer> call dps_parinfer#apply("${n}")
+          au TextChangedP <buffer> call dps_parinfer#apply("${n}")
+        aug END
+    `,
+      );
+    },
   };
 
   const n = denops.name;
+  const fts = globalConfig.filetypes.join(",");
   await helper.execute(
     denops,
     `
-    command! DpsParinferApply call denops#notify("${n}", "applyToBuffer", [])
-    command! DpsParinferSmartMode call denops#notify("${n}", "switchToSmartMode", [])
-    command! DpsParinferParenMode call denops#notify("${n}", "switchToParenMode", [])
-    command! DpsParinferIndentMode call denops#notify("${n}", "switchToIndentMode", [])
-    call dps_parinfer#buf_enter("${n}")
+    aug DpsParinferInitialize
+      au!
+      au FileType ${fts} call denops#notify("${n}", "initialize", [])
+    aug END
     `,
   );
 
-  await autocmd.group(denops, "dps-parinfer-autocmd", (helper) => {
-    helper.define("BufEnter", "*", `call dps_parinfer#buf_enter("${n}")`);
-    helper.define("WinEnter", "*.clj", `call dps_parinfer#win_enter("${n}")`);
-    helper.define(
-      "CursorMoved",
-      "*.clj",
-      `call dps_parinfer#cursor_moved("${n}")`,
-    );
-    helper.define("TextChanged", "*.clj", `call dps_parinfer#apply("${n}")`);
-    helper.define("TextChangedI", "*.clj", `call dps_parinfer#apply("${n}")`);
-    helper.define("InsertCharPre", "*.clj", `call dps_parinfer#apply("${n}")`);
-    helper.define("InsertEnter", "*.clj", `call dps_parinfer#apply("${n}")`);
-    helper.define("TextChangedP", "*.clj", `call dps_parinfer#apply("${n}")`);
-  });
+  const currentFiletype = await variable.options.get(denops, "filetype");
+  if (
+    unknownutil.isString(currentFiletype) &&
+    globalConfig.filetypes.includes(currentFiletype)
+  ) {
+    denops.dispatch(n, "initialize", []);
+  }
 }
