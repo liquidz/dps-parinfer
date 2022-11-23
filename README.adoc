@@ -1,1 +1,15 @@
 = dps-parinfer
+
+image:https://github.com/liquidz/dps-parinfer/actions/workflows/test.yml/badge.svg["GitHub Actions for test workflow", link="https://github.com/liquidz/dps-parinfer/actions/workflows/test.yml"]
+
+
+Vim/Neovim plugin to support writing Lisp codes with https://shaunlebron.github.io/parinfer/[Parinfer] and https://github.com/vim-denops/denops.vim[Denops].
+
+== WIP
+
+== License
+
+Copyright (c) 2022 http://twitter.com/uochan[Masashi Iizuka]
+
+Distributed under the MIT License.
+
