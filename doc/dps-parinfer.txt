@@ -1,0 +1,112 @@
+*dps-parinfer.txt*                         Plugin to support writing Lisp codes 
+
+Author : Masashi Iizuka <liquidz.uo+vim@gmail.com>
+License: MIT LICENSE
+
+==============================================================================
+CONTENTS                                                *dps-parinfer-contents*
+
+  Install                      |dps-parinfer-install|
+  Interface                    |dps-parinfer-interface|
+    Commands                   |dps-parinfer-commands|
+  Customizing                  |dps-parinfer-customizing|
+
+==============================================================================
+INSTALL                                                  *dps-parinfer-install*
+
+  Requirement:
+  - Vim 8.1.2424 or later, Neovim 0.4.4 or later
+  - Deno 1.28 or later 
+    npm support is required
+
+  Vim plugin dependencies:
+  - Denops
+    https://github.com/vim-denops/denops.vim
+
+==============================================================================
+INTERFACE                                              *dps-parinfer-interface*
+
+------------------------------------------------------------------------------
+COMMANDS                                                *dps-parinfer-commands*
+
+                                                           *DpsParinferDisable*
+DpsParinferDisable
+  Disable this plugin.
+
+                                                            *DpsParinferEnable*
+DpsParinferEnable
+  Enable this plugin.
+
+                                                             *DpsParinferApply*
+DpsParinferApply
+  Apply parinfer to the current buffer.
+
+                                                         *DpsParinferSmartMode*
+DpsParinferSmartMode
+  Switch to `smart` mode.
+
+                                                         *DpsParinferParenMode*
+DpsParinferParenMode
+  Switch to `paren` mode.
+
+                                                        *DpsParinferIndentMode*
+DpsParinferIndentMode
+  Switch to `indent` mode.
+
+==============================================================================
+CUSTOMIZING                                          *dps-parinfer-customizing*
+
+                                                          *g:dps_parinfer_mode*
+g:dps_parinfer_mode
+  The initial mode for parinfer.
+  It should be one of `'smart'`, `'indent'` or `'paren'`.
+  Default value is `'smart'`.
+
+                                                     *g:dps_parinfer_filetypes*
+g:dps_parinfer_filetypes
+  Which file types enable parinfer.
+  It should be an array of string.
+  The following filetypes are set by default.
+  - carp
+  - clojure
+  - dune
+  - fennel
+  - hy
+  - janet
+  - lisp
+  - racket
+  - scheme
+  - wast
+  - yuck
+
+                                                 *g:dps_parinfer_comment_chars*
+g:dps_parinfer_comment_chars
+  Comment characters.
+  This is a global configuration not related to file types.
+  You can use `b:dps_parinfer_comment_chars` for per buffer configuration.
+  Default value is `[';']` .
+
+                                              *g:dps_parinfer_open_paren_chars*
+g:dps_parinfer_open_paren_chars
+  Open parentheses characters.
+  This is a global configuration not related to file types.
+  You can use `b:dps_parinfer_open_paren_chars` for per buffer configuration.
+  Default value is `['(', '[' ,'{']` .
+                                             *g:dps_parinfer_close_paren_chars*
+g:dps_parinfer_close_paren_chars
+  Close parentheses characters.
+  This is a global configuration not related to file types.
+  You can use `b:dps_parinfer_close_paren_chars` for per buffer configuration.
+
+                                                 *g:dps_parinfer_force_balance*
+g:dps_parinfer_force_balance
+  See https://github.com/parinfer/parinfer.js
+  Default value is `v:false`.
+
+                                                *g:dps_parinfer_partial_result*
+g:dps_parinfer_partial_result
+  See https://github.com/parinfer/parinfer.js
+  Default value is `v:false`.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:noet:fen:fdl=0:
