@@ -5,7 +5,21 @@ image:https://github.com/liquidz/dps-parinfer/actions/workflows/test.yml/badge.s
 
 Vim/Neovim plugin to support writing Lisp codes with https://shaunlebron.github.io/parinfer/[Parinfer] and https://github.com/vim-denops/denops.vim[Denops].
 
-== WIP
+== Requirement
+
+* Vim 8.1.2424 or later, Neovim 0.4.4 or later
+* https://deno.land[Deno] 1.28 or later
+** npm support is required
+
+== Install
+
+vim-plug example:
+
+[source,vim]
+----
+Plug 'vim-denops/denops.vim'
+Plug 'liquidz/dps-parinfer'
+----
 
 == License
 
