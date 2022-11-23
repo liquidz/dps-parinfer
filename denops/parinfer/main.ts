@@ -95,25 +95,37 @@ export async function main(denops: Denops): Promise<void> {
   const globalConfig = await loadGlobalConfig(denops);
   const bufferOptions: Map<string, ParinferOption> = new Map();
 
+  let isEnabled = true;
   let mode: ParinferMode = globalConfig.mode;
   const prevCursor: Cursor = { line: -1, column: -1 };
   let innerPrevText = "";
   let lastUpdatedAt = unixTime();
 
   denops.dispatcher = {
+    disable() {
+      isEnabled = false;
+      console.log("dps-parinfer is disabled.");
+      return Promise.resolve(isEnabled);
+    },
+    enable() {
+      isEnabled = true;
+      console.log("dps-parinfer is enabled.");
+      return Promise.resolve(isEnabled);
+    },
+
     switchToSmartMode() {
       mode = "smart";
-      return Promise.resolve(true);
+      return Promise.resolve(mode);
     },
 
     switchToIndentMode() {
       mode = "indent";
-      return Promise.resolve(true);
+      return Promise.resolve(mode);
     },
 
     switchToParenMode() {
       mode = "paren";
-      return Promise.resolve(true);
+      return Promise.resolve(mode);
     },
 
     setOption(filetype: unknown, option: unknown) {
@@ -124,6 +136,10 @@ export async function main(denops: Denops): Promise<void> {
     },
 
     async applyToBuffer(filetype: unknown) {
+      if (!isEnabled) {
+        return;
+      }
+
       unknownutil.assertString(filetype);
       const [pos, prevPos, prevText, lines] = await getCurrentStatus(
         denops,
