@@ -16,12 +16,10 @@ endfunction
 
 function! dps_parinfer#buf_enter(name) abort
   call s:update_all()
-  return denops#notify(a:name, 'setOption', [&filetype, {
+  return denops#notify(a:name, 'setBufferOption', [&filetype, {
         \ 'commentChars': get(b:, 'dps_parinfer_comment_chars', v:null),
         \ 'openParenChars': get(b:, 'dps_parinfer_open_paren_chars', v:null),
         \ 'closeParenChars': get(b:, 'dps_parinfer_close_paren_chars', v:null),
-        \ 'forceBalance': get(g:, 'dps_parinfer_force_balance', v:null),
-        \ 'partialResult': get(g:, 'dps_parinfer_partial_result', v:null),
         \ }])
 endfunction
 

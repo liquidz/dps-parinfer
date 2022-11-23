@@ -128,7 +128,7 @@ export async function main(denops: Denops): Promise<void> {
       return Promise.resolve(mode);
     },
 
-    setOption(filetype: unknown, option: unknown) {
+    setBufferOption(filetype: unknown, option: unknown) {
       unknownutil.assertString(filetype);
       unknownutil.assertObject(option);
       bufferOptions.set(filetype, unknownToParinferOption(option));
