@@ -36,3 +36,53 @@ Deno.test("Remove line", () => {
     newText: "",
   }]);
 });
+
+Deno.test("Indent lines", () => {
+  asserts.assertEquals(
+    sut.getChanges("(do\n(foo)\n(bar))\n", "(do\n  (foo)\n  (bar))\n"),
+    [
+      { lineNo: 1, x: 0, oldText: "", newText: "  " },
+      { lineNo: 2, x: 0, oldText: "", newText: "  " },
+    ],
+  );
+
+  asserts.assertEquals(
+    sut.getChanges(
+      "(foo)\n(bar)\n(baz\n  :baz)\n",
+      "(foo)\n(bar)\n  (baz\n  :baz)\n",
+    ),
+    [
+      { lineNo: 2, x: 0, oldText: "", newText: "  " },
+    ],
+  );
+
+  asserts.assertEquals(
+    sut.getChanges(
+      `(do)\n(= (str\n       :foo)\n   "")\n(= (str\n     :foo)\n  "")`,
+      `(do\n  (= (str\n         :foo)\n     "")\n  (= (str\n       :foo)\n    ""))`,
+    ),
+    [
+      { lineNo: 0, x: 3, oldText: ")", newText: "" },
+      { lineNo: 1, x: 0, oldText: "", newText: "  " },
+      { lineNo: 2, x: 7, oldText: "", newText: "  " },
+      { lineNo: 3, x: 3, oldText: "", newText: "  " },
+      { lineNo: 4, x: 0, oldText: "", newText: "  " },
+      { lineNo: 5, x: 5, oldText: "", newText: "  " },
+      { lineNo: 6, x: 2, oldText: "", newText: "  " },
+      { lineNo: 6, x: 7, oldText: "", newText: ")" },
+    ],
+  );
+});
+
+Deno.test("Join lines", () => {
+  asserts.assertEquals(
+    sut.getChanges(
+      "(list :foo\n  (str :bar\n       :baz))",
+      "(list :foo (str :bar\n       :baz))",
+    ),
+    [
+      { lineNo: 0, x: 10, oldText: "\n", newText: "" },
+      { lineNo: 0, x: 11, oldText: " ", newText: "" },
+    ],
+  );
+});

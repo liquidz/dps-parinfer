@@ -16,57 +16,36 @@ function modeToFunction(mode: ParinferMode): ParinferFn {
   return parinfer.smartMode;
 }
 
-function getLineChanges(
-  lineNo: number,
-  before: string,
-  after: string,
-): ParinferChange[] {
-  const res: ParinferChange[] = [];
-  let x = 0;
-  for (const d of diff.diffChars(before, after)) {
-    if (d.added) {
-      res.push({ lineNo: lineNo, x: x, oldText: "", newText: d.value });
-      x += d.count;
-    } else if (d.removed) {
-      res.push({ lineNo: lineNo, x: x, oldText: d.value, newText: "" });
-    } else {
-      x += d.count;
-    }
-  }
-  return res;
+function countNewLine(s: string): number {
+  return [...s.matchAll(/\r?\n/g)].length;
 }
 
 export function getChanges(before: string, after: string): ParinferChange[] {
-  if (before == after) {
-    return [];
-  }
-
-  let res: ParinferChange[] = [];
+  let x = 0;
   let lineNo = 0;
-  let removedLine = "";
+  const res: ParinferChange[] = [];
 
-  for (const d of diff.diffLines(before, after)) {
+  for (const d of diff.diffChars(before, after)) {
     if (d.added) {
-      if (removedLine === "") {
-        res.push({ lineNo: lineNo, x: 0, oldText: "", newText: d.value });
+      res.push({ lineNo: lineNo, x: x, oldText: "", newText: d.value });
+      const lineCnt = countNewLine(d.value);
+      lineNo += lineCnt;
+      if (lineCnt > 0) {
+        x = d.value.length - (d.value.lastIndexOf("\n") + 1);
       } else {
-        res = res.concat(getLineChanges(lineNo, removedLine, d.value));
+        x += d.count;
       }
-      removedLine = "";
-      lineNo += d.count;
     } else if (d.removed) {
-      removedLine = d.value;
+      res.push({ lineNo: lineNo, x: x, oldText: d.value, newText: "" });
     } else {
-      if (removedLine !== "") {
-        res.push({ lineNo: lineNo, x: 0, oldText: removedLine, newText: "" });
+      const lineCnt = countNewLine(d.value);
+      lineNo += lineCnt;
+      if (lineCnt > 0) {
+        x = d.value.length - (d.value.lastIndexOf("\n") + 1);
+      } else {
+        x += d.count;
       }
-      removedLine = "";
-      lineNo += d.count;
     }
-  }
-
-  if (removedLine !== "") {
-    res.push({ lineNo: lineNo, x: 0, oldText: removedLine, newText: "" });
   }
   return res;
 }
