@@ -160,6 +160,11 @@ export async function main(denops: Denops): Promise<void> {
       option.cursorX = pos[2] - 1;
       option.prevCursorLine = prevPos[1] - 1;
       option.prevCursorX = prevPos[2] - 1;
+      try {
+        option.changes = getChanges(prevText, joined);
+      } catch (ex) {
+        console.log(ex);
+      }
       option.changes = getChanges(prevText, joined);
 
       const result = await applyParinfer(mode, joined, option);
