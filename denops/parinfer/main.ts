@@ -205,17 +205,14 @@ export async function main(denops: Denops): Promise<void> {
         command! DpsParinferIndentMode call denops#notify("${n}", "switchToIndentMode", [])
         call dps_parinfer#buf_enter("${n}")
 
-        aug DpsParinferAutoCmd
-          au!
-          au BufEnter <buffer> call dps_parinfer#buf_enter("${n}")
-          au WinEnter <buffer> call dps_parinfer#win_enter("${n}")
-          au CursorMoved <buffer> call dps_parinfer#cursor_moved("${n}")
-          au TextChanged <buffer> call dps_parinfer#apply("${n}")
-          au TextChangedI <buffer> call dps_parinfer#apply("${n}")
-          au InsertCharPre <buffer> call dps_parinfer#apply("${n}")
-          au InsertEnter <buffer> call dps_parinfer#apply("${n}")
-          au TextChangedP <buffer> call dps_parinfer#apply("${n}")
-        aug END
+        au! DpsParinferAutoCmd BufEnter <buffer> call dps_parinfer#buf_enter("${n}")
+        au! DpsParinferAutoCmd WinEnter <buffer> call dps_parinfer#win_enter("${n}")
+        au! DpsParinferAutoCmd CursorMoved <buffer> call dps_parinfer#cursor_moved("${n}")
+        au! DpsParinferAutoCmd TextChanged <buffer> call dps_parinfer#apply("${n}")
+        au! DpsParinferAutoCmd TextChangedI <buffer> call dps_parinfer#apply("${n}")
+        au! DpsParinferAutoCmd InsertCharPre <buffer> call dps_parinfer#apply("${n}")
+        au! DpsParinferAutoCmd InsertEnter <buffer> call dps_parinfer#apply("${n}")
+        au! DpsParinferAutoCmd TextChangedP <buffer> call dps_parinfer#apply("${n}")
     `,
       );
     },
@@ -226,7 +223,7 @@ export async function main(denops: Denops): Promise<void> {
   await helper.execute(
     denops,
     `
-    aug DpsParinferInitialize
+    aug DpsParinferAutoCmd
       au!
       au FileType ${fts} call denops#notify("${n}", "initialize", [])
     aug END
