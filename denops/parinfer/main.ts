@@ -148,6 +148,10 @@ export async function main(denops: Denops): Promise<void> {
       );
 
       const joined = lines.join("\n");
+      if (joined == prevText) {
+        return;
+      }
+
       const option = {
         ...(globalConfig.option),
         ...(bufferOptions.get(filetype)),
