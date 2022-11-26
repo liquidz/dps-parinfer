@@ -1,5 +1,5 @@
 import { unknownutil } from "./deps.ts";
-import { ParinferMode, ParinferOption } from "./type.ts";
+import { ParinferMode, ParinferOption } from "./types.ts";
 
 export function unknownToParinferMode(mode: unknown): ParinferMode {
   if (mode === null) {

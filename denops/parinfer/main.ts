@@ -1,5 +1,5 @@
 import { batch, Denops, helper, unknownutil, variable } from "./deps.ts";
-import { Config, Cursor, ParinferMode, ParinferOption } from "./type.ts";
+import { Config, Cursor, ParinferMode, ParinferOption } from "./types.ts";
 import { applyParinfer, getChanges } from "./parinfer.ts";
 import { unknownToParinferMode, unknownToParinferOption } from "./unknown.ts";
 

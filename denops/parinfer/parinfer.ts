@@ -5,7 +5,7 @@ import {
   ParinferMode,
   ParinferOption,
   ParinferResult,
-} from "./type.ts";
+} from "./types.ts";
 
 function modeToFunction(mode: ParinferMode): ParinferFn {
   if (mode === "indent") {
