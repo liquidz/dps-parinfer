@@ -1,4 +1,4 @@
-import { asserts } from "./deps.ts";
+import { asserts } from "./test_deps.ts";
 import * as sut from "./parinfer.ts";
 
 Deno.test("No changes", () => {

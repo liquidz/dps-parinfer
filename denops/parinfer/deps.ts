@@ -6,4 +6,3 @@ export * as variable from "https://deno.land/x/denops_std@v3.9.3/variable/mod.ts
 export { default as parinfer } from "npm:parinfer@3.13.1";
 import * as diff from "npm:diff@5.1.0";
 export { diff };
-export * as asserts from "https://deno.land/std@0.165.0/testing/asserts.ts";
