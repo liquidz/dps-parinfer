@@ -11,7 +11,6 @@ export function unknownToParinferMode(mode: unknown): ParinferMode {
   } else if (mode === "paren") {
     return "paren";
   } else if (mode === "indent") {
-    console.log("kokoyo");
     return "indent";
   }
 
