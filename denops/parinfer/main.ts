@@ -1,5 +1,5 @@
 import { batch, Denops, helper, unknownutil, variable } from "./deps.ts";
-import { Config, Cursor, ParinferMode, ParinferOption } from "./types.ts";
+import { Config, ParinferMode, ParinferOption } from "./types.ts";
 import { applyParinfer, getChanges } from "./parinfer.ts";
 import { unknownToParinferMode, unknownToParinferOption } from "./unknown.ts";
 
@@ -16,10 +16,6 @@ const DEFAULT_FILETYPES = [
   "wast",
   "yuck",
 ];
-
-function unixTime(): number {
-  return (new Date()).getTime();
-}
 
 async function loadGlobalConfig(denops: Denops): Promise<Config> {
   const [
@@ -55,51 +51,12 @@ async function loadGlobalConfig(denops: Denops): Promise<Config> {
   };
 }
 
-async function getCurrentStatus(
-  denops: Denops,
-  lastUpdatedAt: number,
-  innerPrevText: string,
-): Promise<[Array<number>, Array<number>, string, Array<string>]> {
-  if (innerPrevText === "" || (unixTime() - lastUpdatedAt) > 300) {
-    const [pos, prevPos, prevText, lines] = await batch.gather(
-      denops,
-      async (denops) => {
-        await denops.call("getcurpos");
-        await variable.windows.get(denops, "dps_parinfer_curpos");
-        await variable.windows.get(denops, "dps_parinfer_text");
-        await denops.call("getline", 1, "$");
-      },
-    );
-    unknownutil.assertArray<number>(pos);
-    unknownutil.assertArray<number>(prevPos);
-    unknownutil.assertString(prevText);
-    unknownutil.assertArray<string>(lines);
-    return [pos, prevPos, prevText, lines];
-  } else {
-    const [pos, prevPos, lines] = await batch.gather(
-      denops,
-      async (denops) => {
-        await denops.call("getcurpos");
-        await variable.windows.get(denops, "dps_parinfer_curpos");
-        await denops.call("getline", 1, "$");
-      },
-    );
-    unknownutil.assertArray<number>(pos);
-    unknownutil.assertArray<number>(prevPos);
-    unknownutil.assertArray<string>(lines);
-    return [pos, prevPos, innerPrevText, lines];
-  }
-}
-
 export async function main(denops: Denops): Promise<void> {
   const globalConfig = await loadGlobalConfig(denops);
   const bufferOptions: Map<string, ParinferOption> = new Map();
 
   let isEnabled = true;
   let mode: ParinferMode = globalConfig.mode;
-  const prevCursor: Cursor = { line: -1, column: -1 };
-  let innerPrevText = "";
-  let lastUpdatedAt = unixTime();
 
   denops.dispatcher = {
     disable() {
@@ -135,37 +92,59 @@ export async function main(denops: Denops): Promise<void> {
       return Promise.resolve(true);
     },
 
-    async applyToBuffer(filetype: unknown) {
+    async applyToBuffer(
+      filetype: unknown,
+      currentLine: unknown,
+      currentColumn: unknown,
+      prevLine: unknown,
+      prevColumn: unknown,
+      topFormStartLine: unknown,
+      prevText: unknown,
+      lines: unknown,
+    ) {
       if (!isEnabled) {
         return;
       }
 
       unknownutil.assertString(filetype);
-      const [pos, prevPos, prevText, lines] = await getCurrentStatus(
-        denops,
-        lastUpdatedAt,
-        innerPrevText,
-      );
+      unknownutil.assertNumber(currentLine);
+      unknownutil.assertNumber(currentColumn);
+      unknownutil.assertNumber(prevLine);
+      unknownutil.assertNumber(prevColumn);
+      unknownutil.assertNumber(topFormStartLine);
+      unknownutil.assertString(prevText);
+      unknownutil.assertArray<string>(lines);
 
       const joined = lines.join("\n");
       if (joined == prevText) {
         return;
       }
 
+      // console.log(
+      //   `lines count = ${lines.length}, prevText count = ${
+      //     prevText.split(/\r?\n/).length
+      //   }`,
+      // );
+
       const option = {
         ...(globalConfig.option),
         ...(bufferOptions.get(filetype)),
       };
-      option.cursorLine = pos[1] - 1;
-      option.cursorX = pos[2] - 1;
-      option.prevCursorLine = prevPos[1] - 1;
-      option.prevCursorX = prevPos[2] - 1;
+
+      option.cursorLine = currentLine - topFormStartLine;
+      //console.log(`cursorLine = ${option.cursorLine}`);
+      option.cursorX = currentColumn - 1;
+      option.prevCursorLine = prevLine - topFormStartLine;
+      option.prevCursorX = prevColumn - 1;
       try {
         option.changes = getChanges(prevText, joined);
       } catch (ex) {
         console.log(ex);
       }
-      option.changes = getChanges(prevText, joined);
+      // console.log(prevText);
+      // console.log("===============================================");
+      // console.log(joined);
+      // console.log(option.changes);
 
       const result = await applyParinfer(mode, joined, option);
       const applied = result.text;
@@ -173,30 +152,40 @@ export async function main(denops: Denops): Promise<void> {
       if (joined == applied) {
         return;
       }
+      // console.log(joined);
+      // console.log("===============================================");
+      // console.log(applied);
 
       const newLines = applied.split(/\r?\n/);
       let start = NaN;
       let end = NaN;
       for (let i = 0; i < newLines.length; i++) {
         if (lines[i] != newLines[i]) {
-          start = start || i;
+          start = isNaN(start) ? i : start;
           end = i;
         }
+        // console.log(
+        //   `   diff [${lines[i]}] <=> [${
+        //     newLines[i]
+        //   }], start = ${start}, end = ${end}`,
+        // );
       }
+
+      // console.log("===============================================");
+      // console.log(`start = ${start}, end = ${end + 1}`);
+      // console.log(newLines.slice(start, end + 1));
 
       await batch.batch(denops, async (denops) => {
         await denops.cmd("silent! undojoin");
         await denops.call(
           "setline",
-          start + 1,
+          topFormStartLine + start,
           newLines.slice(start, end + 1),
         );
       });
 
-      prevCursor.line = result.cursorLine;
-      prevCursor.column = result.cursorX;
-      innerPrevText = applied;
-      lastUpdatedAt = unixTime();
+      // prevCursor.line = result.cursorLine;
+      // prevCursor.column = result.cursorX;
 
       await denops.redraw(false);
     },
@@ -206,22 +195,24 @@ export async function main(denops: Denops): Promise<void> {
       await helper.execute(
         denops,
         `
-        command! DpsParinferDisable call denops#notify("${n}", "disable", [])
-        command! DpsParinferEnable call denops#notify("${n}", "enable", [])
-        command! DpsParinferApply call denops#notify("${n}", "applyToBuffer", [])
-        command! DpsParinferSmartMode call denops#notify("${n}", "switchToSmartMode", [])
-        command! DpsParinferParenMode call denops#notify("${n}", "switchToParenMode", [])
+        command! DpsParinferDisable    call denops#notify("${n}", "disable", [])
+        command! DpsParinferEnable     call denops#notify("${n}", "enable", [])
+        command! DpsParinferApply      call denops#notify("${n}", "applyToBuffer", [])
+        command! DpsParinferSmartMode  call denops#notify("${n}", "switchToSmartMode", [])
+        command! DpsParinferParenMode  call denops#notify("${n}", "switchToParenMode", [])
         command! DpsParinferIndentMode call denops#notify("${n}", "switchToIndentMode", [])
         call dps_parinfer#buf_enter("${n}")
 
-        au! DpsParinferAutoCmd BufEnter <buffer> call dps_parinfer#buf_enter("${n}")
-        au! DpsParinferAutoCmd WinEnter <buffer> call dps_parinfer#win_enter("${n}")
-        au! DpsParinferAutoCmd CursorMoved <buffer> call dps_parinfer#cursor_moved("${n}")
-        au! DpsParinferAutoCmd TextChanged <buffer> call dps_parinfer#apply("${n}")
-        au! DpsParinferAutoCmd TextChangedI <buffer> call dps_parinfer#apply("${n}")
+        au! DpsParinferAutoCmd BufEnter      <buffer> call dps_parinfer#buf_enter("${n}")
+        au! DpsParinferAutoCmd WinEnter      <buffer> call dps_parinfer#win_enter("${n}")
+        au! DpsParinferAutoCmd CursorMoved   <buffer> call dps_parinfer#cursor_moved("${n}")
+        au! DpsParinferAutoCmd ModeChanged   <buffer> call dps_parinfer#mode_changed("${n}")
+
+        au! DpsParinferAutoCmd TextChanged   <buffer> call dps_parinfer#apply("${n}")
+        au! DpsParinferAutoCmd TextChangedI  <buffer> call dps_parinfer#apply("${n}")
         au! DpsParinferAutoCmd InsertCharPre <buffer> call dps_parinfer#apply("${n}")
-        au! DpsParinferAutoCmd InsertEnter <buffer> call dps_parinfer#apply("${n}")
-        au! DpsParinferAutoCmd TextChangedP <buffer> call dps_parinfer#apply("${n}")
+        au! DpsParinferAutoCmd InsertEnter   <buffer> call dps_parinfer#apply("${n}")
+        au! DpsParinferAutoCmd TextChangedP  <buffer> call dps_parinfer#apply("${n}")
     `,
       );
     },
