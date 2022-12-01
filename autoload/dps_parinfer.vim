@@ -38,7 +38,7 @@ function! s:update_curpos() abort
   let w:dps_start_line = tpos['start']
   let w:dps_end_line = tpos['end']
 
-  if s:debug | echom printf('Debug: update_curpos %s', tpos)
+  if s:debug | echom printf('Debug: update_curpos %s', tpos) | endif
 endfunction
 
 function! s:update_text() abort
@@ -48,6 +48,10 @@ endfunction
 function! s:update_all() abort
   call s:update_curpos()
   call s:update_text()
+endfunction
+
+function! dps_parinfer#set_debug(is_debug) abort
+  let s:debug = a:is_debug
 endfunction
 
 function! dps_parinfer#buf_enter(name) abort

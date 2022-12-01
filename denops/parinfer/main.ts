@@ -56,6 +56,7 @@ export async function main(denops: Denops): Promise<void> {
   const bufferOptions: Map<string, ParinferOption> = new Map();
 
   let isEnabled = true;
+  let isDebug = false;
   let mode: ParinferMode = globalConfig.mode;
 
   denops.dispatcher = {
@@ -120,19 +121,12 @@ export async function main(denops: Denops): Promise<void> {
         return;
       }
 
-      // console.log(
-      //   `lines count = ${lines.length}, prevText count = ${
-      //     prevText.split(/\r?\n/).length
-      //   }`,
-      // );
-
       const option = {
         ...(globalConfig.option),
         ...(bufferOptions.get(filetype)),
       };
 
       option.cursorLine = currentLine - topFormStartLine;
-      //console.log(`cursorLine = ${option.cursorLine}`);
       option.cursorX = currentColumn - 1;
       option.prevCursorLine = prevLine - topFormStartLine;
       option.prevCursorX = prevColumn - 1;
@@ -141,10 +135,6 @@ export async function main(denops: Denops): Promise<void> {
       } catch (ex) {
         console.log(ex);
       }
-      // console.log(prevText);
-      // console.log("===============================================");
-      // console.log(joined);
-      // console.log(option.changes);
 
       const result = await applyParinfer(mode, joined, option);
       const applied = result.text;
@@ -152,9 +142,17 @@ export async function main(denops: Denops): Promise<void> {
       if (joined == applied) {
         return;
       }
-      // console.log(joined);
-      // console.log("===============================================");
-      // console.log(applied);
+
+      if (isDebug) {
+        console.log("== PREV TEXT ==================================");
+        console.log(prevText);
+        console.log("== JOINED =====================================");
+        console.log(joined);
+        console.log("== CHANGES ====================================");
+        console.log(option.changes);
+        console.log("== APPLIED ====================================");
+        console.log(applied);
+      }
 
       const newLines = applied.split(/\r?\n/);
       let start = NaN;
@@ -164,16 +162,7 @@ export async function main(denops: Denops): Promise<void> {
           start = isNaN(start) ? i : start;
           end = i;
         }
-        // console.log(
-        //   `   diff [${lines[i]}] <=> [${
-        //     newLines[i]
-        //   }], start = ${start}, end = ${end}`,
-        // );
       }
-
-      // console.log("===============================================");
-      // console.log(`start = ${start}, end = ${end + 1}`);
-      // console.log(newLines.slice(start, end + 1));
 
       await batch.batch(denops, async (denops) => {
         await denops.cmd("silent! undojoin");
@@ -190,17 +179,23 @@ export async function main(denops: Denops): Promise<void> {
       await denops.redraw(false);
     },
 
+    toggleDebug() {
+      isDebug = !isDebug;
+      return denops.call("dps_parinfer#set_debug", isDebug);
+    },
+
     async initialize() {
       const n = denops.name;
       await helper.execute(
         denops,
         `
-        command! DpsParinferDisable    call denops#notify("${n}", "disable", [])
-        command! DpsParinferEnable     call denops#notify("${n}", "enable", [])
-        command! DpsParinferApply      call denops#notify("${n}", "applyToBuffer", [])
-        command! DpsParinferSmartMode  call denops#notify("${n}", "switchToSmartMode", [])
-        command! DpsParinferParenMode  call denops#notify("${n}", "switchToParenMode", [])
-        command! DpsParinferIndentMode call denops#notify("${n}", "switchToIndentMode", [])
+        command! DpsParinferDisable     call denops#notify("${n}", "disable", [])
+        command! DpsParinferEnable      call denops#notify("${n}", "enable", [])
+        command! DpsParinferApply       call denops#notify("${n}", "applyToBuffer", [])
+        command! DpsParinferSmartMode   call denops#notify("${n}", "switchToSmartMode", [])
+        command! DpsParinferParenMode   call denops#notify("${n}", "switchToParenMode", [])
+        command! DpsParinferIndentMode  call denops#notify("${n}", "switchToIndentMode", [])
+        command! DpsParinferToggleDebug call denops#notify("${n}", "toggleDebug", [])
         call dps_parinfer#buf_enter("${n}")
 
         au! DpsParinferAutoCmd BufEnter      <buffer> call dps_parinfer#buf_enter("${n}")
