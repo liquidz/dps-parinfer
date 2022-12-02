@@ -5,6 +5,13 @@ export type Cursor = {
   column: number;
 };
 
+export type Difference = {
+  count: number;
+  value: string;
+  added: boolean | undefined;
+  removed: boolean | undefined;
+};
+
 export type ParinferChange = {
   lineNo: number;
   x: number;
