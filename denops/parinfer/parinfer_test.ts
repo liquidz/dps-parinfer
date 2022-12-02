@@ -28,6 +28,21 @@ Deno.test("Add line", () => {
   }]);
 });
 
+Deno.test("Paste multiple lines", () => {
+  asserts.assertEquals(
+    sut.getChanges(
+      "(foo\n  (bar))",
+      "(foo\n    (new foo\n         bar)\n  (bar))",
+    ),
+    [{
+      lineNo: 1,
+      x: 0,
+      oldText: "",
+      newText: "    (new foo\n         bar)\n",
+    }],
+  );
+});
+
 Deno.test("Remove line", () => {
   asserts.assertEquals(sut.getChanges("foo\nbar", "foo\n"), [{
     lineNo: 1,
