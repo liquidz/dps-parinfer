@@ -36,13 +36,19 @@ function getLinesChangesFromDiffs(lineDiffs: Difference[]): ParinferChange[] {
   return res;
 }
 
+function isOnlySpace(s: string): boolean {
+  return (s.match(/^[ \t ]*$/) !== null);
+}
+
 function getCharsChanges(before: string, after: string): ParinferChange[] {
   const res: ParinferChange[] = [];
   let x = 0;
   let lineNo = 0;
+  let isOnlySpaceFlag = true;
 
   for (const d of diffChars(before, after)) {
     if (d.added) {
+      isOnlySpaceFlag = isOnlySpaceFlag && isOnlySpace(d.value);
       res.push({ lineNo: lineNo, x: x, oldText: "", newText: d.value });
       const lineCnt = countNewLine(d.value);
       lineNo += lineCnt;
@@ -52,6 +58,7 @@ function getCharsChanges(before: string, after: string): ParinferChange[] {
         x += d.value.length;
       }
     } else if (d.removed) {
+      isOnlySpaceFlag = isOnlySpaceFlag && isOnlySpace(d.value);
       res.push({ lineNo: lineNo, x: x, oldText: d.value, newText: "" });
     } else {
       const lineCnt = countNewLine(d.value);
@@ -64,6 +71,9 @@ function getCharsChanges(before: string, after: string): ParinferChange[] {
     }
   }
 
+  if (isOnlySpaceFlag && res.length > 1) {
+    return [];
+  }
   return res;
 }
 

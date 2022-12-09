@@ -52,13 +52,14 @@ Deno.test("Remove line", () => {
   }]);
 });
 
-Deno.test("Indent lines", () => {
+Deno.test("Indent single line", () => {
   asserts.assertEquals(
-    sut.getChanges("(do\n(foo)\n(bar))\n", "(do\n  (foo)\n  (bar))\n"),
-    [
-      { lineNo: 1, x: 0, oldText: "", newText: "  " },
-      { lineNo: 2, x: 0, oldText: "", newText: "  " },
-    ],
+    sut.getChanges("foo", " foo"),
+    [{ lineNo: 0, x: 0, oldText: "", newText: " " }],
+  );
+  asserts.assertEquals(
+    sut.getChanges("foo", "\tfoo"),
+    [{ lineNo: 0, x: 0, oldText: "", newText: "\t" }],
   );
 
   asserts.assertEquals(
@@ -69,6 +70,18 @@ Deno.test("Indent lines", () => {
     [
       { lineNo: 2, x: 0, oldText: "", newText: "  " },
     ],
+  );
+});
+
+Deno.test("Indent multiple lines", () => {
+  // Only space changes for multiple lines should be ignored
+  asserts.assertEquals(
+    sut.getChanges("(do\n(foo)\n(bar))\n", "(do\n  (foo)\n  (bar))\n"),
+    [],
+    // [
+    //   { lineNo: 1, x: 0, oldText: "", newText: "  " },
+    //   { lineNo: 2, x: 0, oldText: "", newText: "  " },
+    // ],
   );
 
   asserts.assertEquals(
