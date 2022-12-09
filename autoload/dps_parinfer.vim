@@ -1,5 +1,6 @@
 let s:debug = v:false
 let s:visual_start_line = v:null
+let s:insert_mode_after_blockwise_visual_mode = v:false
 
 function! s:get_top_form_pos() abort
   let v = winsaveview()
@@ -64,10 +65,16 @@ function! dps_parinfer#buf_enter(name) abort
 endfunction
 
 function! dps_parinfer#mode_changed(name) abort
+  let s:insert_mode_after_blockwise_visual_mode = v:false
   if v:event['new_mode'] =~ '^[vV]'
     let s:visual_start_line = line('.')
   elseif v:event['old_mode'] =~ '^[vV]'
     let s:visual_start_line = v:null
+
+    " NOTE: Detect 'insert' mode after blockwise visual mode
+    if v:event['old_mode'] ==# '' && v:event['new_mode'] ==# 'i'
+      let s:insert_mode_after_blockwise_visual_mode = v:true
+    endif
   endif
 endfunction
 
@@ -95,7 +102,7 @@ function! dps_parinfer#apply(name) abort
     let b:last_changedtick = -1
   endif
 
-  if b:last_changedtick != b:changedtick
+  if b:last_changedtick != b:changedtick && ! s:insert_mode_after_blockwise_visual_mode
     let b:last_changedtick = b:changedtick
 
     if ! exists('w:dps_start_line')
