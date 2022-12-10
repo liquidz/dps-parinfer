@@ -1,6 +1,15 @@
 let s:debug = v:false
 let s:visual_start_line = v:null
 let s:insert_mode_after_blockwise_visual_mode = v:false
+let s:debounce_keys = {}
+
+let g:dps_parinfer#delay = get(g:, 'dps_parinfer#delay', 10)
+
+function! s:debounce(key, delay_msec, fn) abort
+  let timer = get(s:debounce_keys, a:key)
+  silent! call timer_stop(timer)
+  let s:debounce_keys[a:key] = timer_start(a:delay_msec, a:fn)
+endfunction
 
 function! s:get_top_form_pos() abort
   let v = winsaveview()
@@ -109,19 +118,12 @@ function! dps_parinfer#apply(name) abort
       call s:update_curpos()
     endif
     let curpos = getcurpos()
-    "let tpos = s:get_top_form_pos()
-    "let lines = getline(tpos['start'], tpos['end'])
-    "echom printf('FIMXE now %s, %s', w:dps_start_line, w:dps_end_line)
     let lines = getline(w:dps_start_line, w:dps_end_line)
-    "let lines = getline(1, '$')
-    " silent! call timer_stop(s:timer)
-    " let s:timer = timer_start(g:dps_parinfer_delay, { ->
-    "      \ denops#request_async(a:name, 'applyToBuffer', [&filetype],
-    "      \                      {_ -> s:update_all()},
-    "      \                      {_ -> v:null})})
-    return denops#request_async(a:name, 'applyToBuffer',
-          \ [&filetype, curpos[1], curpos[2], w:dps_parinfer_prevpos[1], w:dps_parinfer_prevpos[2], w:dps_start_line, w:dps_parinfer_prev_text, lines],
-          \ {_ -> s:update_all()},
-          \ {ex -> s:error(ex)})
+
+    return s:debounce('applyToBuffeer', g:dps_parinfer#delay, {_ ->
+          \ denops#request_async(a:name, 'applyToBuffer',
+          \   [&filetype, curpos[1], curpos[2], w:dps_parinfer_prevpos[1], w:dps_parinfer_prevpos[2], w:dps_start_line, w:dps_parinfer_prev_text, lines],
+          \   {_ -> s:update_all()},
+          \   {ex -> s:error(ex)})})
   endif
 endfunction
